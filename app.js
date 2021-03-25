@@ -4,7 +4,8 @@ const express = require("express");
 const bodyParser = require("body-parser");
 const mongoose = require("mongoose");
 const ejs = require("ejs");
-const md5 = require("md5");
+const bcrypt = require("bcrypt");
+const saltrounds = 10;
 const app = express();
 
 app.use(express.static("public"));
@@ -34,27 +35,35 @@ app.get("/register", function (req, res) {
 });
 
 app.post("/register", function(req, res){
-    const newUser = new User({
-        email: req.body.username,
-        password: md5(req.body.password)
-    });
-    User.findOne({email: newUser.email}, function(err, foundUser){
-        if(err){
-            res.send(err);
-        } else if(foundUser){
-            res.send("User already exists!");
-        } else {
-            newUser.save(function(err){
-                if(!err){
-                    res.render("secrets");
+    bcrypt.hash(req.body.password, saltrounds, function(err, hash){
+        if(!err){
+            const newUser = new User({
+                email: req.body.username,
+                password: hash
+            });
+            User.findOne({email: newUser.email}, function(err, foundUser){
+                if(err){
+                    res.send(err);
+                } else if(foundUser){
+                    res.send("User already exists!");
                 } else {
-                    res.render(err);
+                    newUser.save(function(err){
+                        if(!err){
+                            res.render("secrets");
+                        } else {
+                            res.render(err);
+                        }
+                    });
                 }
             });
+        } else {
+            res.send(err);
         }
     });
     
-})
+    
+    
+});
 
 app.post("/login", function(req, res){
     const username = req.body.username;
